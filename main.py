@@ -20,7 +20,8 @@ def imshow_grid(img):
     ax = plt.gca()
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
-    plt.show()    
+    plt.show()   
+
 # VAE model
 class VAE(nn.Module):
     def __init__(self, image_size, hidden_size_1, hidden_size_2, latent_size):
@@ -114,6 +115,21 @@ def test(epoch, model, test_loader):
                 comparison = torch.cat([data[:n], recon_batch.view(BATCH_SIZE, 1, 28, 28)[:n]]) # (16, 1, 28, 28)
                 grid = torchvision.utils.make_grid(comparison.cpu()) # (3, 62, 242)
                 writer.add_image("Test image - Above: Real data, below: reconstruction data", grid, epoch)
+def testOtherInput(model,test_data):
+    with torch.no_grad():
+        test_data=torch.from_numpy(test_data).float()
+        test_data=test_data.to(DEVICE)
+        mu, logvar = model.encode(test_data)
+        print("mean:")
+        print(mu)
+        print("logvar:")
+        print(logvar)
+        recon_image = model.decode(model.reparameterize(mu,logvar)).cpu()
+
+        print("recon_image:")
+        print(recon_image)
+        grid = torchvision.utils.make_grid(recon_image.view(1, 1, 28, 28))
+        writer.add_image("test other", grid, 1)  
 
 def latent_to_image(epoch, model):
     with torch.no_grad():
@@ -129,7 +145,7 @@ if __name__ == "__main__":
     current_time = datetime.datetime.now() + datetime.timedelta()
     current_time = current_time.strftime('%Y-%m-%d-%H_%M')
 
-    saved_loc = os.path.join('./content/VAE_Result/'+current_time)
+    saved_loc = os.path.join('./content/VAE_Result/Fashion'+current_time)
     os.mkdir(saved_loc)
 
     print("저장 위치: ", saved_loc)
@@ -141,33 +157,30 @@ if __name__ == "__main__":
     transformer = transforms.Compose([transforms.ToTensor()])
 
     # Loading trainset, testset and trainloader, testloader
-    trainset = torchvision.datasets.MNIST(root = './content/MNIST', train = True,
+    trainset = torchvision.datasets.FashionMNIST(root = './content/FashionMNIST', train = True,
                                             download = True, transform = transformer)
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
 
 
-    testset = torchvision.datasets.MNIST(root = './content/MNIST', train = False,
+    testset = torchvision.datasets.FashionMNIST(root = './content/FashionMNIST', train = False,
                                             download = True, transform = transformer)
 
     testloader = torch.utils.data.DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
     # sample check
     sample, label = next(iter(trainloader))
 
-    
-
-
-    imshow_grid(sample[0:8])
+    #imshow_grid(sample[0:8])
 
     VAE_model = VAE(28*28, 512, 256, 2).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
-
+    testOtherInput(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
         train(epoch, VAE_model, trainloader, optimizer)
         test(epoch, VAE_model, testloader)
         print("\n")
         latent_to_image(epoch, VAE_model)
-
+    testOtherInput(VAE_model, np.ones(28*28))
     
     writer.close()
     
