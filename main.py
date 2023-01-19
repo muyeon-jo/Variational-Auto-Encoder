@@ -28,18 +28,16 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
 
         self.fc1 = nn.Linear(image_size, hidden_size_1)
-        self.fc2 = nn.Linear(hidden_size_1, hidden_size_2)
-        self.fc31 = nn.Linear(hidden_size_2, latent_size)
-        self.fc32 = nn.Linear(hidden_size_2, latent_size)
+        self.fc21 = nn.Linear(hidden_size_1, latent_size)
+        self.fc22 = nn.Linear(hidden_size_1, latent_size)
 
-        self.fc4 = nn.Linear(latent_size, hidden_size_2)
-        self.fc5 = nn.Linear(hidden_size_2, hidden_size_1)
-        self.fc6 = nn.Linear(hidden_size_1, image_size)
+        self.fc3 = nn.Linear(latent_size, hidden_size_1)
+        self.fc4 = nn.Linear(hidden_size_1, image_size)
 
     def encode(self, x):
-        h1 = F.relu(self.fc1(x))
-        h2 = F.relu(self.fc2(h1))
-        return self.fc31(h2), self.fc32(h2)
+        h1 = F.tanh(self.fc1(x))
+        
+        return self.fc21(h1), self.fc22(h1)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -47,9 +45,8 @@ class VAE(nn.Module):
         return mu + std * eps
 
     def decode(self, z):
-        h3 = F.relu(self.fc4(z))
-        h4 = F.relu(self.fc5(h3))
-        return torch.sigmoid(self.fc6(h4))
+        h3 = F.tanh(self.fc3(z))
+        return torch.sigmoid(self.fc4(h3))
 
     def forward(self, x):
         mu, logvar = self.encode(x.view(-1, 784))
@@ -145,7 +142,7 @@ if __name__ == "__main__":
     current_time = datetime.datetime.now() + datetime.timedelta()
     current_time = current_time.strftime('%Y-%m-%d-%H_%M')
 
-    saved_loc = os.path.join('./content/VAE_Result/Fashion'+current_time)
+    saved_loc = os.path.join('./content/VAE_Result/'+current_time)
     os.mkdir(saved_loc)
 
     print("저장 위치: ", saved_loc)
@@ -157,13 +154,13 @@ if __name__ == "__main__":
     transformer = transforms.Compose([transforms.ToTensor()])
 
     # Loading trainset, testset and trainloader, testloader
-    trainset = torchvision.datasets.FashionMNIST(root = './content/FashionMNIST', train = True,
+    trainset = torchvision.datasets.MNIST(root = './content/MNIST', train = True,
                                             download = True, transform = transformer)
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
 
 
-    testset = torchvision.datasets.FashionMNIST(root = './content/FashionMNIST', train = False,
+    testset = torchvision.datasets.MNIST(root = './content/MNIST', train = False,
                                             download = True, transform = transformer)
 
     testloader = torch.utils.data.DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
