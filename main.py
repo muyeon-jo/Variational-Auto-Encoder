@@ -112,7 +112,7 @@ def test(epoch, model, test_loader):
                 comparison = torch.cat([data[:n], recon_batch.view(BATCH_SIZE, 1, 28, 28)[:n]]) # (16, 1, 28, 28)
                 grid = torchvision.utils.make_grid(comparison.cpu()) # (3, 62, 242)
                 writer.add_image("Test image - Above: Real data, below: reconstruction data", grid, epoch)
-def testOtherInput(model,test_data):
+def test_other_input(model,test_data):
     with torch.no_grad():
         test_data=torch.from_numpy(test_data).float()
         test_data=test_data.to(DEVICE)
@@ -171,13 +171,13 @@ if __name__ == "__main__":
 
     VAE_model = VAE(28*28, 512, 256, 2).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
-    testOtherInput(VAE_model, np.ones(28*28))
+    test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
         train(epoch, VAE_model, trainloader, optimizer)
         test(epoch, VAE_model, testloader)
         print("\n")
         latent_to_image(epoch, VAE_model)
-    testOtherInput(VAE_model, np.ones(28*28))
+    test_other_input(VAE_model, np.ones(28*28))
     
     writer.close()
     
