@@ -24,7 +24,7 @@ def imshow_grid(img):
 
 # VAE model
 class VAE(nn.Module):
-    def __init__(self, image_size, hidden_size_1, hidden_size_2, latent_size):
+    def __init__(self, image_size, hidden_size_1, latent_size):
         super(VAE, self).__init__()
 
         self.fc1 = nn.Linear(image_size, hidden_size_1)
@@ -169,9 +169,9 @@ if __name__ == "__main__":
 
     #imshow_grid(sample[0:8])
 
-    VAE_model = VAE(28*28, 512, 256, 2).to(DEVICE)
+    VAE_model = VAE(28*28, 512, 2).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
-    test_other_input(VAE_model, np.ones(28*28))
+    #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
         train(epoch, VAE_model, trainloader, optimizer)
         test(epoch, VAE_model, testloader)
