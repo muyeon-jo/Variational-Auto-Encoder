@@ -170,29 +170,43 @@ def makeUserData():
     print("user length = "+str(len(r)))
     for i,row in f.items():
         for j, v in row.items():
-            if len(v) <= 1:
+            if len(v) < 1:
                 continue
             li = np.zeros(len(r))
             for key, value in v.items():
                 li[key] = value
+                if value >1.0:
+                    print(value)
             
             data.append(li)
             label.append([i,j])
-            #total.append((li,[i,j]))
-    # pickle_save(data, "./content/POI(philadelphia)/normalizedUserVisitData.pkl")
-    # pickle_save(label, "./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
-    #pickle_save(total, "./content/POI(philadelphia)/normalizedUserVisitData_total.pkl")
     return data , label, len(r)
 def makeCateData():
     f = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/visitedCategoryPerArea.pkl")
     r = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/cate2Index.pkl")
+    userlabels = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
     label = []
     data = []
     #total = []
+    """
+    가게 데이터 중 카테고리 데이터가 존재하지 않는 가게가 있다 따라서 유저를 가지지만 카테고리는 가지지못하는 지역이
+    발생하기 때문에 이러한 문제를 해결하기 위해 유저를 가지는 지역이면 카테고리가 비어있더라도 만들어야한다.
+    """
+    #유저를 가지는 지역을 구분하기위한 딕셔너리
+    labelsDict = dict()
+    for i in userlabels:
+        labelsDict[str(i[0])+","+str(i[1])] = 1
+
     print("category length = "+str(len(r)))
     for i,row in f.items():
         for j, v in row.items():
-            if len(v) <= 1:
+            checker = False
+            try:
+                labelsDict[str(i)+","+str(j)] +=1
+            except:
+                checker = True
+
+            if len(v) < 1 and checker:
                 continue
             li = np.zeros(len(r))
             sum = 0
@@ -203,10 +217,6 @@ def makeCateData():
             
             data.append(li)
             label.append([i,j])
-            #total.append((li,[i,j]))
-    # pickle_save(data, "./content/POI(philadelphia)/normalizedUserVisitData.pkl")
-    # pickle_save(label, "./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
-    #pickle_save(total, "./content/POI(philadelphia)/normalizedUserVisitData_total.pkl")
     return data , label, len(r)
 
 def getUserEmbedding(model):
@@ -217,7 +227,6 @@ def getUserEmbedding(model):
         temp = model.getLatent(i.to("cuda"))
         embedding.append(temp)
     pickleData.pickle_save(embedding,"./content/Embeddings/userEmbed.pkl")
-    pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
 
 def getCategoryEmbedding(model):
     data,label,length  = pickleData.makeCateData()
@@ -227,7 +236,6 @@ def getCategoryEmbedding(model):
         temp = model.getLatent(i.to("cuda"))
         embedding.append(temp)
     pickleData.pickle_save(embedding,"./content/Embeddings/categoryEmbed.pkl")
-    pickleData.pickle_save(label,"./content/Embeddings/categorylabel.pkl")
 if __name__ == "__main__":
     USE_CUDA = torch.cuda.is_available()
     DEVICE = torch.device("cuda" if USE_CUDA else "cpu")
@@ -243,12 +251,15 @@ if __name__ == "__main__":
 
    
     writer = SummaryWriter(saved_loc)
-    EPOCHS = 50
+    EPOCHS = 25
     BATCH_SIZE = 100
     # Transformer code
     transformer = transforms.Compose([transforms.ToTensor()])
 
+    # data, label, input_len = makeUserData()
+    # pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
     data, label, input_len = makeCateData()
+    
     # data = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData.pkl")
     # label = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
     np.random.shuffle(data)
@@ -276,10 +287,10 @@ if __name__ == "__main__":
     print(len(trainset))
     
     # sample check
-    sample, label = next(iter(trainloader))
+    #sample, label = next(iter(trainloader))
     #imshow_grid(sample[0:8])
-    print(len(sample))
-    VAE_model = VAE(input_len, 256, 64).to(DEVICE)
+    #print(len(sample))
+    VAE_model = VAE(input_len, 512, 128).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
@@ -288,7 +299,5 @@ if __name__ == "__main__":
         print("\n")
         #latent_to_image(epoch, VAE_model)
     #test_other_input(VAE_model, np.ones(28*28))
-    #VAE_model = pickleData.pickle_load("./VAE_model_user.pkl")
     getCategoryEmbedding(VAE_model)
     writer.close()
-    pickleData.pickle_save(VAE_model ,saved_loc+"/VAE_model_category.pkl")

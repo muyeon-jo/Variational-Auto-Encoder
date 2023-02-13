@@ -3,7 +3,7 @@ import numpy as np
 import pickleData
 import multiprocessing as mp
 import torch
-
+import matplotlib.pyplot as plt
 def cosineSimilarity(x,y):
     return np.dot(x,y)/(norm(x)*norm(y))
 def multi(embed, start, end, pn):
@@ -18,14 +18,14 @@ def multi(embed, start, end, pn):
             sim[count].append(cosineSimilarity(embed[i],embed[j]))
 
         count += 1
-    pickleData.pickle_save(sim,"temp"+pn+".pkl")
+    pickleData.pickle_save(sim,"./temp/temp"+pn+".pkl")
 def merge():
-    tt = pickleData.pickle_load("temp0.pkl")
-    t1 =pickleData.pickle_load("temp1.pkl")
-    t2=pickleData.pickle_load("temp2.pkl")
-    t3=pickleData.pickle_load("temp3.pkl")
-    t4=pickleData.pickle_load("temp4.pkl")
-    t5=pickleData.pickle_load("temp5.pkl")
+    tt = pickleData.pickle_load("./temp/temp0.pkl")
+    t1 =pickleData.pickle_load("./temp/temp1.pkl")
+    t2=pickleData.pickle_load("./temp/temp2.pkl")
+    t3=pickleData.pickle_load("./temp/temp3.pkl")
+    t4=pickleData.pickle_load("./temp/temp4.pkl")
+    t5=pickleData.pickle_load("./temp/temp5.pkl")
 
     tt.extend(t1)
     tt.extend(t2)
@@ -37,13 +37,12 @@ def merge():
     del(t3)
     del(t4)
     del(t5)
-    print("saving..")
-    pickleData.pickle_save(tt,"./content/Embeddings/similarity.pkl")
+    # print("saving..")
+    # pickleData.pickle_save(tt,"./content/Embeddings/similarity.pkl")
+    return tt
 def getSim():
     userEmbed = pickleData.pickle_load("./content/Embeddings/userEmbed.pkl")
-    userLabel = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
     cateEmbed = pickleData.pickle_load("./content/Embeddings/categoryEmbed.pkl")
-    cateLabel = pickleData.pickle_load("./content/Embeddings/categorylabel.pkl")
 
     fusionEmbed = []
     for i in range(len(userEmbed)):
@@ -65,6 +64,83 @@ def getSim():
     pool.starmap(multi,work)
     pool.close()
     pool.join()
+def getSortedEmbed():
+    cateEmbed = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
+    result = merge()
+    simResult = []
+    count = 0
+    for row in result:
+        temp = []
+        for i in range(len(row)):
+            temp.append((row[i],cateEmbed[i]))
+        
+        sor = sorted(temp,key = lambda s: s[0], reverse = True)
+        simResult.append(sor)
+        if count %1000 == 0:
+            print(count)
+            pickleData.pickle_save(simResult, "./content/Embeddings/sortedFusionEmbedding"+ str(count)+".pkl")
+            simResult = []
+        count+=1
+        
+    pickleData.pickle_save(simResult, "./content/Embeddings/sortedFusionEmbedding"+ str(count)+".pkl")
 
+def visualize(index,embedSize):
+
+    if index == 0:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(0)+".pkl")
+        data = temp[index]
+    elif index <=1000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(1000)+".pkl")
+        data = temp[index-1]
+    elif index <=2000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(2000)+".pkl")
+        data = temp[index-1001]
+    elif index <=3000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(3000)+".pkl")
+        data = temp[index-2001]
+    elif index <=4000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(4000)+".pkl")
+        data = temp[index-3001]
+    elif index <=5000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(5000)+".pkl")
+        data = temp[index-4001]
+    elif index <=6000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(6000)+".pkl")
+        data = temp[index-5001]
+    elif index <=7000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(7000)+".pkl")
+        data = temp[index-6001]
+    elif index <=8000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(8000)+".pkl")
+        data = temp[index-7001]
+    elif index <=9000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(9000)+".pkl")
+        data = temp[index-8001]
+    elif index <=10000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(10000)+".pkl")
+        data = temp[index-9001]
+    elif index <=11000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(11000)+".pkl")
+        data = temp[index-10001]
+    elif index <=12000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12000)+".pkl")
+        data = temp[index-10001]
+    else:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12604)+".pkl")
+        data = temp[index-12001]
+
+    xplot = []
+    yplot = []
+    plt.plot(data[0][1][1], data[0][1][0], 'ro')
+    for i in range(1,10):
+        xplot.append(data[i][1][1])
+        yplot.append(data[i][1][0])
+    plt.plot(xplot, yplot, 'bo')
+    plt.xlabel('X-Index(100m)')
+    plt.ylabel('Y-Index(100m)')
+    plt.show()
 if __name__ == "__main__":
-    merge()
+    #getSim()
+    #getSortedEmbed()
+    visualize(2805, "1024+64")
+    visualize(2805, "1024+128")
