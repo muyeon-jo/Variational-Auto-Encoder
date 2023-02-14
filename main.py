@@ -256,9 +256,9 @@ if __name__ == "__main__":
     # Transformer code
     transformer = transforms.Compose([transforms.ToTensor()])
 
-    # data, label, input_len = makeUserData()
-    # pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
-    data, label, input_len = makeCateData()
+    data, label, input_len = makeUserData()
+    pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
+    #data, label, input_len = makeCateData()
     
     # data = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData.pkl")
     # label = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     #sample, label = next(iter(trainloader))
     #imshow_grid(sample[0:8])
     #print(len(sample))
-    VAE_model = VAE(input_len, 512, 128).to(DEVICE)
+    VAE_model = VAE(input_len, 1024, 512).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
@@ -299,5 +299,5 @@ if __name__ == "__main__":
         print("\n")
         #latent_to_image(epoch, VAE_model)
     #test_other_input(VAE_model, np.ones(28*28))
-    getCategoryEmbedding(VAE_model)
+    getUserEmbedding(VAE_model)
     writer.close()

@@ -124,23 +124,50 @@ def visualize(index,embedSize):
         data = temp[index-10001]
     elif index <=12000:
         temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12000)+".pkl")
-        data = temp[index-10001]
+        data = temp[index-11001]
     else:
         temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12604)+".pkl")
         data = temp[index-12001]
+    visitedArea = pickleData.pickle_load("philadelphia10_visitedArea")
+    visitedX = []
+    visitedY = []
+    area = []
+    color = []    
+    for i in range(len(visitedArea)):
+        for j in range(len(visitedArea[0])):
+            if(visitedArea[i][j] > 0.0):
+                area.append(visitedArea[i][j]/19453 * 500)
+                visitedX.append(j)
+                visitedY.append(i)
+                color.append(visitedArea[i][j])
+    # plt.matshow(visitedArea)
+    # plt.colorbar()
+    # plt.show()
+    # print(max(area))
+    plt.scatter(visitedX, visitedY,s = area, alpha = 0.3, c=color)
+    plt.colorbar()
 
     xplot = []
     yplot = []
     plt.plot(data[0][1][1], data[0][1][0], 'ro')
-    for i in range(1,10):
+    plt.text(data[0][1][1],data[0][1][0],"("+str(data[0][1][1])+","+str(data[0][1][0])+")")
+    for i in range(1,11):
         xplot.append(data[i][1][1])
         yplot.append(data[i][1][0])
-    plt.plot(xplot, yplot, 'bo')
+        plt.text(data[i][1][1],data[i][1][0],"("+str(data[i][1][1])+","+str(data[i][1][0])+")")
+    plt.plot(xplot, yplot, 'co')
+    xplot = []
+    yplot = []
+    for i in range(11,51):
+        xplot.append(data[i][1][1])
+        yplot.append(data[i][1][0])
+        #plt.text(data[i][1][1],data[i][1][0],"("+str(data[i][1][1])+","+str(data[i][1][0])+")")
+    plt.plot(xplot, yplot, 'yo')
     plt.xlabel('X-Index(100m)')
     plt.ylabel('Y-Index(100m)')
     plt.show()
 if __name__ == "__main__":
-    #getSim()
-    #getSortedEmbed()
-    visualize(2805, "1024+64")
-    visualize(2805, "1024+128")
+    # getSim()
+    # getSortedEmbed()
+    visualize(6073, "512+128")
+    #visualize(12000, "1024+128")
