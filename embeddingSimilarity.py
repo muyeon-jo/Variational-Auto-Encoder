@@ -166,8 +166,125 @@ def visualize(index,embedSize):
     plt.xlabel('X-Index(100m)')
     plt.ylabel('Y-Index(100m)')
     plt.show()
+
+def compareSimilarArea(key1, key2, N:int, embedSize):
+    posDict = pickleData.pickle_load("./content/Embeddings/posDict.pkl")
+    index = posDict[key1]
+
+    if index == 0:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(0)+".pkl")
+        sim1 = temp[index]
+    elif index <=1000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(1000)+".pkl")
+        sim1 = temp[index-1]
+    elif index <=2000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(2000)+".pkl")
+        sim1 = temp[index-1001]
+    elif index <=3000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(3000)+".pkl")
+        sim1 = temp[index-2001]
+    elif index <=4000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(4000)+".pkl")
+        sim1 = temp[index-3001]
+    elif index <=5000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(5000)+".pkl")
+        sim1 = temp[index-4001]
+    elif index <=6000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(6000)+".pkl")
+        sim1 = temp[index-5001]
+    elif index <=7000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(7000)+".pkl")
+        sim1 = temp[index-6001]
+    elif index <=8000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(8000)+".pkl")
+        sim1 = temp[index-7001]
+    elif index <=9000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(9000)+".pkl")
+        sim1 = temp[index-8001]
+    elif index <=10000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(10000)+".pkl")
+        sim1 = temp[index-9001]
+    elif index <=11000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(11000)+".pkl")
+        sim1 = temp[index-10001]
+    elif index <=12000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12000)+".pkl")
+        sim1 = temp[index-11001]
+    else:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12604)+".pkl")
+        sim1 = temp[index-12001]
+
+    index = posDict[key2]
+
+    if index == 0:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(0)+".pkl")
+        sim2 = temp[index]
+    elif index <=1000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(1000)+".pkl")
+        sim2 = temp[index-1]
+    elif index <=2000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(2000)+".pkl")
+        sim2 = temp[index-1001]
+    elif index <=3000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(3000)+".pkl")
+        sim2 = temp[index-2001]
+    elif index <=4000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(4000)+".pkl")
+        sim2 = temp[index-3001]
+    elif index <=5000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(5000)+".pkl")
+        sim2 = temp[index-4001]
+    elif index <=6000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(6000)+".pkl")
+        sim2 = temp[index-5001]
+    elif index <=7000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(7000)+".pkl")
+        sim2 = temp[index-6001]
+    elif index <=8000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(8000)+".pkl")
+        sim2 = temp[index-7001]
+    elif index <=9000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(9000)+".pkl")
+        sim2 = temp[index-8001]
+    elif index <=10000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(10000)+".pkl")
+        sim2 = temp[index-9001]
+    elif index <=11000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(11000)+".pkl")
+        sim2 = temp[index-10001]
+    elif index <=12000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12000)+".pkl")
+        sim2 = temp[index-11001]
+    else:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12604)+".pkl")
+        sim2 = temp[index-12001]
+
+    set1 = set()
+    set2 = set()
+    
+    for i in sim1[:N]:
+        set1.add(str(i[1]))
+    
+    for i in sim2[:N]:
+        set2.add(str(i[1]))
+
+    print(len(set1&set2))
+    print(set1&set2)
+def getPositionDict():
+    label = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
+    data = dict()
+    count= 0
+    for i in label:
+        data[str(i[0])+","+str(i[1])] = count
+        count+=1
+
+    pickleData.pickle_save(data,"./content/Embeddings/posDict.pkl")
 if __name__ == "__main__":
-    # getSim()
-    # getSortedEmbed()
-    visualize(6073, "512+128")
-    #visualize(12000, "1024+128")
+    getSim()
+    getSortedEmbed()
+    #visualize(4000, "512+128")
+    #visualize(4000, "1024+128")
+    #visualize(4000, "1024+128")
+    #visualize(12000, "epoch30 1024+128")
+    #visualize(12000, "epoch30 1024+128_2")
+    #compareSimilarArea("100,434","98,428",100,"epoch30 1024+128")

@@ -26,23 +26,22 @@ def imshow_grid(img):
 
 # VAE model
 class VAE(nn.Module):
-    def __init__(self, input_size, hidden_size_1, hidden_size_2, latent_size):
+    def __init__(self, image_size, hidden_size_1, hidden_size_2, latent_size):
         super(VAE, self).__init__()
-        self.input_size = input_size
-        self.hidden_size_1 = hidden_size_1
-        self.latent_size = latent_size
-        self.fc1 = nn.Linear(input_size, hidden_size_1)
-        self.fc11 = nn.Linear(hidden_size_1, hidden_size_2)
-        self.fc21 = nn.Linear(hidden_size_2, latent_size)
-        self.fc22 = nn.Linear(hidden_size_2, latent_size)
 
-        self.fc3 = nn.Linear(latent_size, hidden_size_1)
-        self.fc31 = nn.Linear(hidden_size_1, hidden_size_2)
-        self.fc4 = nn.Linear(hidden_size_2, input_size)
+        self.fc1 = nn.Linear(image_size, hidden_size_1)
+        self.fc2 = nn.Linear(hidden_size_1, hidden_size_2)
+        self.fc31 = nn.Linear(hidden_size_2, latent_size)
+        self.fc32 = nn.Linear(hidden_size_2, latent_size)
+
+        self.fc4 = nn.Linear(latent_size, hidden_size_2)
+        self.fc5 = nn.Linear(hidden_size_2, hidden_size_1)
+        self.fc6 = nn.Linear(hidden_size_1, image_size)
+
     def encode(self, x):
         h1 = torch.relu(self.fc1(x))
-        h2 = torch.relu(self.fc11(h1))
-        return self.fc21(h2), self.fc22(h2)
+        h2 = torch.relu(self.fc2(h1))
+        return self.fc31(h2), self.fc32(h2)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -50,28 +49,22 @@ class VAE(nn.Module):
         return mu + std * eps
 
     def decode(self, z):
-        h3 = torch.relu(self.fc3(z))
-        h4 = torch.relu(self.fc31(h3))
-        return torch.sigmoid(self.fc4(h4))
+        h3 = torch.relu(self.fc4(z))
+        h4 = torch.relu(self.fc5(h3))
+        return torch.sigmoid(self.fc6(h4))
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, self.input_size))
+        mu, logvar = self.encode(x.view(-1, 784))
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
-    def getLatent(self, x):
-        with torch.no_grad():
-            mu, logvar = self.encode(x)
-            z = self.reparameterize(mu, logvar)
-            return z
 def loss_function(recon_x, x, mu, logvar, input_size):
     BCE = F.binary_cross_entropy(recon_x, x.view(-1, input_size), reduction = 'sum')
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return BCE, KLD
 
-def train(epoch, model, train_loader, optimizer, input_size, lam):
+def train(epoch, model, train_loader, optimizer, input_size):
     model.train()
     train_loss = 0
-    batch_avrg_loss = 0
     for batch_idx, (data, _) in enumerate(train_loader):
         data = data.to(DEVICE)
         optimizer.zero_grad()
@@ -80,7 +73,7 @@ def train(epoch, model, train_loader, optimizer, input_size, lam):
 
         BCE, KLD = loss_function(recon_batch, data, mu, logvar, input_size)
 
-        loss = BCE + (lam) * KLD
+        loss = BCE + KLD
 
         writer.add_scalar("Train/Reconstruction Error", BCE.item(), batch_idx + epoch * (len(train_loader.dataset)/BATCH_SIZE) )
         writer.add_scalar("Train/KL-Divergence", KLD.item(), batch_idx + epoch * (len(train_loader.dataset)/BATCH_SIZE) )
@@ -89,14 +82,14 @@ def train(epoch, model, train_loader, optimizer, input_size, lam):
         loss.backward()
 
         train_loss += loss.item()
-        batch_avrg_loss+=loss.item()
+
         optimizer.step()
 
         if batch_idx % 100 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t Loss: {:.6f}'.format(
                 epoch, (batch_idx) * len(data), len(train_loader.dataset),
                 100. * (batch_idx) / len(train_loader),
-                batch_avrg_loss / len(data)))
+                loss.item() / len(data)))
             
     print("======> Epoch: {} Average loss: {:.4f}".format(
         epoch, train_loss / len(train_loader.dataset)
@@ -121,7 +114,7 @@ def test(epoch, model, test_loader, input_size):
 
             if batch_idx == 0:
                 n = min(data.size(0), 8)
-                comparison = torch.cat([data[:n], recon_batch.view(BATCH_SIZE,input_len)[:n]]) # (16, 1, 28, 28)
+                comparison = torch.cat([data[:n], recon_batch.view(BATCH_SIZE,1, 28,28)[:n]]) # (16, 1, 28, 28)
                 grid = torchvision.utils.make_grid(comparison.cpu()) # (3, 62, 242)
                 writer.add_image("Test image - Above: Real data, below: reconstruction data", grid, epoch)
 def test_other_input(model,test_data):
@@ -253,40 +246,41 @@ if __name__ == "__main__":
     os.mkdir(saved_loc)
 
     print("저장 위치: ", saved_loc)
+
+   
     writer = SummaryWriter(saved_loc)
     EPOCHS = 30
     BATCH_SIZE = 100
     # Transformer code
     transformer = transforms.Compose([transforms.ToTensor()])
 
-    data, label, input_len = makeCateData()
-    #pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
-    #data, label, input_len = makeCateData()
+    # data, label, input_len = makeUserData()
+    # #pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
+    # #data, label, input_len = makeCateData()
     
-    # data = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData.pkl")
-    # label = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
-    np.random.shuffle(data)
-    tr = data[:int(len(data)/10*8)]
-    #tr_label = label[:int(len(label)/10*8)]
-    te = data[int(len(data)/10*8):]
-    #te_label = label[:int(len(label)/10*8)]
-    trainset = CustomDataset(tr,tr)
-    trainloader = DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
-
-    testset = CustomDataset(te,te)
-    testloader = DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
-
-    # Loading trainset, testset and trainloader, testloader
-    # trainset = torchvision.datasets.MNIST(root = './content/MNIST', train = True,
-    #                                         download = True, transform = transformer)
-
+    # # data = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData.pkl")
+    # # label = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
+    # np.random.shuffle(data)
+    # tr = data[:int(len(data)/10*8)]
+    # #tr_label = label[:int(len(label)/10*8)]
+    # te = data[int(len(data)/10*8):]
+    # #te_label = label[:int(len(label)/10*8)]
+    # trainset = CustomDataset(tr,tr)
     # trainloader = DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
 
-
-    # testset = torchvision.datasets.MNIST(root = './content/MNIST', train = False,
-    #                                         download = True, transform = transformer)
-
+    # testset = CustomDataset(te,te)
     # testloader = DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
+    # Loading trainset, testset and trainloader, testloader
+    trainset = torchvision.datasets.MNIST(root = './content/MNIST', train = True,
+                                            download = True, transform = transformer)
+
+    trainloader = DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
+
+
+    testset = torchvision.datasets.MNIST(root = './content/MNIST', train = False,
+                                            download = True, transform = transformer)
+
+    testloader = DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
     print(len(testset))
     print(len(trainset))
     
@@ -294,14 +288,14 @@ if __name__ == "__main__":
     #sample, label = next(iter(trainloader))
     #imshow_grid(sample[0:8])
     #print(len(sample))
-    VAE_model = VAE(input_len, 512, 128, 64).to(DEVICE)
+    VAE_model = VAE(28*28, 128*2,128, 32).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
-        train(epoch, VAE_model, trainloader, optimizer, input_len, 0.5)
-        test(epoch, VAE_model, testloader,input_len)
+        train(epoch, VAE_model, trainloader, optimizer, 28*28)
+        test(epoch, VAE_model, testloader,28*28)
         print("\n")
-        #latent_to_image(epoch, VAE_model)
-    #test_other_input(VAE_model, np.ones(28*28))
-    getCategoryEmbedding(VAE_model)
+        latent_to_image(epoch, VAE_model)
+    test_other_input(VAE_model, np.ones(28*28))
+    #getUserEmbedding(VAE_model)
     writer.close()
