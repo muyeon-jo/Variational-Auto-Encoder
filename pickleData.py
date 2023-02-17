@@ -30,10 +30,6 @@ def makeCateData():
             
             data.append(li)
             label.append([i,j])
-            #total.append((li,[i,j]))
-    # pickle_save(data, "./content/POI(philadelphia)/normalizedUserVisitData.pkl")
-    # pickle_save(label, "./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
-    #pickle_save(total, "./content/POI(philadelphia)/normalizedUserVisitData_total.pkl")
     return data , label, len(r)        
 
 def makeUserData():
@@ -41,7 +37,6 @@ def makeUserData():
     r = pickle_load("./content/POI(philadelphia)/philadelphia10/user_id2Index.pkl")
     label = []
     data = []
-    #total = []
     print("user length = "+str(len(r)))
     for i,row in f.items():
         for j, v in row.items():
@@ -53,8 +48,4 @@ def makeUserData():
             
             data.append(li)
             label.append([i,j])
-            #total.append((li,[i,j]))
-    # pickle_save(data, "./content/POI(philadelphia)/normalizedUserVisitData.pkl")
-    # pickle_save(label, "./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
-    #pickle_save(total, "./content/POI(philadelphia)/normalizedUserVisitData_total.pkl")
     return data , label, len(r)

@@ -69,7 +69,10 @@ def loss_function(recon_x, x, mu, logvar, input_size):
     return BCE, KLD
 
 def train(epoch, model, train_loader, optimizer, input_size, lam):
+    #모델이 가지는 레이어들을 training mode로 바꾸어준다.
+    #레이어 마다 평가할 때와 학습할때 가지는 세팅이 다를 수 있는데 이를 반영하는 것으로 생각
     model.train()
+
     train_loss = 0
     batch_avrg_loss = 0
     for batch_idx, (data, _) in enumerate(train_loader):
@@ -86,17 +89,21 @@ def train(epoch, model, train_loader, optimizer, input_size, lam):
         writer.add_scalar("Train/KL-Divergence", KLD.item(), batch_idx + epoch * (len(train_loader.dataset)/BATCH_SIZE) )
         writer.add_scalar("Train/Total Loss" , loss.item(), batch_idx + epoch * (len(train_loader.dataset)/BATCH_SIZE) )
 
+        #loss는 텐서로 이 loss라는 텐서가 계산되기까지 거쳐온 다른 텐서들에 대한 정보를 가지고 있으며
+        #이 정보를 통해 필요한 텐서에 대해 grad값을 계산하서 저장한다.
         loss.backward()
 
         train_loss += loss.item()
         batch_avrg_loss+=loss.item()
+        
+        #계산되어진 grad값을 통해 업데이트를 진행한다.
         optimizer.step()
 
         if batch_idx % 100 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t Loss: {:.6f}'.format(
                 epoch, (batch_idx) * len(data), len(train_loader.dataset),
                 100. * (batch_idx) / len(train_loader),
-                batch_avrg_loss / len(data)))
+                batch_avrg_loss / (len(data) * (batch_idx+1))))
             
     print("======> Epoch: {} Average loss: {:.4f}".format(
         epoch, train_loss / len(train_loader.dataset)
@@ -225,7 +232,7 @@ def makeCateData():
     return data , label, len(r)
 
 def getUserEmbedding(model):
-    data,label,length  = pickleData.makeUserData()
+    data,label,length  = makeUserData()
     data = CustomDataset(data,label)
     embedding = []
     for i, label in data:
@@ -234,7 +241,7 @@ def getUserEmbedding(model):
     pickleData.pickle_save(embedding,"./content/Embeddings/userEmbed.pkl")
 
 def getCategoryEmbedding(model):
-    data,label,length  = pickleData.makeCateData()
+    data,label,length  = makeCateData()
     data = CustomDataset(data,label)
     embedding = []
     for i, label in data: 
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     # Transformer code
     transformer = transforms.Compose([transforms.ToTensor()])
 
-    data, label, input_len = makeCateData()
+    data, label, input_len = makeUserData()
     #pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
     #data, label, input_len = makeCateData()
     
@@ -294,7 +301,7 @@ if __name__ == "__main__":
     #sample, label = next(iter(trainloader))
     #imshow_grid(sample[0:8])
     #print(len(sample))
-    VAE_model = VAE(input_len, 512, 128, 64).to(DEVICE)
+    VAE_model = VAE(input_len, 1024, 512, 128).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
@@ -303,5 +310,5 @@ if __name__ == "__main__":
         print("\n")
         #latent_to_image(epoch, VAE_model)
     #test_other_input(VAE_model, np.ones(28*28))
-    getCategoryEmbedding(VAE_model)
+    getUserEmbedding(VAE_model)
     writer.close()
