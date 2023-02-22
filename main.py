@@ -14,35 +14,27 @@ import datetime
 import os
 import pickleData
 
-def imshow_grid(img):
-    img = torchvision.utils.make_grid(img)
-    print(type(img))
-    print(img.shape)
-    plt.imshow(img.permute(1, 2, 0))
-    ax = plt.gca()
-    ax.axes.xaxis.set_visible(False)
-    ax.axes.yaxis.set_visible(False)
-    plt.show()   
-
 # VAE model
 class VAE(nn.Module):
     def __init__(self, input_size, hidden_size_1, hidden_size_2, latent_size):
         super(VAE, self).__init__()
-        self.input_size = input_size
+        self.input_size= input_size
         self.hidden_size_1 = hidden_size_1
+        self.hidden_size_2 = hidden_size_2
         self.latent_size = latent_size
         self.fc1 = nn.Linear(input_size, hidden_size_1)
-        self.fc11 = nn.Linear(hidden_size_1, hidden_size_2)
-        self.fc21 = nn.Linear(hidden_size_2, latent_size)
-        self.fc22 = nn.Linear(hidden_size_2, latent_size)
+        self.fc2 = nn.Linear(hidden_size_1, hidden_size_2)
+        self.fc31 = nn.Linear(hidden_size_2, latent_size)
+        self.fc32 = nn.Linear(hidden_size_2, latent_size)
 
-        self.fc3 = nn.Linear(latent_size, hidden_size_1)
-        self.fc31 = nn.Linear(hidden_size_1, hidden_size_2)
-        self.fc4 = nn.Linear(hidden_size_2, input_size)
+        self.fc4 = nn.Linear(latent_size, hidden_size_2)
+        self.fc5 = nn.Linear(hidden_size_2, hidden_size_1)
+        self.fc6 = nn.Linear(hidden_size_1, input_size)
+
     def encode(self, x):
-        h1 = torch.relu(self.fc1(x))
-        h2 = torch.relu(self.fc11(h1))
-        return self.fc21(h2), self.fc22(h2)
+        h1 = torch.tanh(self.fc1(x))
+        h2 = torch.relu(self.fc2(h1))
+        return self.fc31(h2), self.fc32(h2)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -50,25 +42,19 @@ class VAE(nn.Module):
         return mu + std * eps
 
     def decode(self, z):
-        h3 = torch.relu(self.fc3(z))
-        h4 = torch.relu(self.fc31(h3))
-        return torch.sigmoid(self.fc4(h4))
+        h3 = torch.tanh(self.fc4(z))
+        h4 = torch.relu(self.fc5(h3))
+        return torch.sigmoid(self.fc6(h4))
 
     def forward(self, x):
         mu, logvar = self.encode(x.view(-1, self.input_size))
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
-    def getLatent(self, x):
-        with torch.no_grad():
-            mu, logvar = self.encode(x)
-            z = self.reparameterize(mu, logvar)
-            return z
 def loss_function(recon_x, x, mu, logvar, input_size):
     BCE = F.binary_cross_entropy(recon_x, x.view(-1, input_size), reduction = 'sum')
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return BCE, KLD
-
-def train(epoch, model, train_loader, optimizer, input_size, lam):
+def train(epoch, model, train_loader, optimizer, input_size, lam:float = 1.0):
     #모델이 가지는 레이어들을 training mode로 바꾸어준다.
     #레이어 마다 평가할 때와 학습할때 가지는 세팅이 다를 수 있는데 이를 반영하는 것으로 생각
     model.train()
@@ -99,17 +85,18 @@ def train(epoch, model, train_loader, optimizer, input_size, lam):
         #계산되어진 grad값을 통해 업데이트를 진행한다.
         optimizer.step()
 
-        if batch_idx % 100 == 0:
+        if (batch_idx+1) % 10 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t Loss: {:.6f}'.format(
-                epoch, (batch_idx) * len(data), len(train_loader.dataset),
+                epoch, batch_idx * BATCH_SIZE + len(data), len(train_loader.dataset),
                 100. * (batch_idx) / len(train_loader),
-                batch_avrg_loss / (len(data) * (batch_idx+1))))
+                batch_avrg_loss / (BATCH_SIZE * 9 + len(data))))
+            batch_avrg_loss = 0
             
     print("======> Epoch: {} Average loss: {:.4f}".format(
         epoch, train_loss / len(train_loader.dataset)
     ))  
 
-def test(epoch, model, test_loader, input_size):
+def test(epoch, model, test_loader, input_size, lam:float = 1.0):
     model.eval()
     test_loss = 0
     with torch.no_grad():
@@ -118,8 +105,7 @@ def test(epoch, model, test_loader, input_size):
             
             recon_batch, mu, logvar = model(data)
             BCE, KLD = loss_function(recon_batch, data, mu, logvar,input_size)
-
-            loss = BCE + KLD
+            loss = BCE + lam*KLD
 
             writer.add_scalar("Test/Reconstruction Error", BCE.item(), batch_idx + epoch * (len(test_loader.dataset)/BATCH_SIZE) )
             writer.add_scalar("Test/KL-Divergence", KLD.item(), batch_idx + epoch * (len(test_loader.dataset)/BATCH_SIZE) )
@@ -131,28 +117,6 @@ def test(epoch, model, test_loader, input_size):
                 comparison = torch.cat([data[:n], recon_batch.view(BATCH_SIZE,input_len)[:n]]) # (16, 1, 28, 28)
                 grid = torchvision.utils.make_grid(comparison.cpu()) # (3, 62, 242)
                 writer.add_image("Test image - Above: Real data, below: reconstruction data", grid, epoch)
-def test_other_input(model,test_data):
-    with torch.no_grad():
-        test_data=torch.from_numpy(test_data).float()
-        test_data=test_data.to(DEVICE)
-        mu, logvar = model.encode(test_data)
-        print("mean:")
-        print(mu)
-        print("logvar:")
-        print(logvar)
-        recon_image = model.decode(model.reparameterize(mu,logvar)).cpu()
-
-        print("recon_image:")
-        print(recon_image)
-        grid = torchvision.utils.make_grid(recon_image.view(1, 1, 28, 28))
-        writer.add_image("Test Other Input", grid, 1)  
-
-def latent_to_image(epoch, model):
-    with torch.no_grad():
-        sample = torch.randn(128, 32).to(DEVICE)
-        recon_image = model.decode(sample).cpu()
-        grid = torchvision.utils.make_grid(recon_image.view(128, 1, 28, 28))
-        writer.add_image("Latent To Image", grid, epoch)        
 def getLatentVector(model, input):
     with torch.no_grad():
         mu, logvar = model.encode(input)
@@ -199,7 +163,6 @@ def makeCateData():
     userlabels = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
     label = []
     data = []
-    #total = []
     """
     가게 데이터 중 카테고리 데이터가 존재하지 않는 가게가 있다 따라서 유저를 가지지만 카테고리는 가지지못하는 지역이
     발생하기 때문에 이러한 문제를 해결하기 위해 유저를 가지는 지역이면 카테고리가 비어있더라도 만들어야한다.
@@ -236,7 +199,7 @@ def getUserEmbedding(model):
     data = CustomDataset(data,label)
     embedding = []
     for i, label in data:
-        temp = model.getLatent(i.to("cuda"))
+        temp = getLatentVector(model,i.to("cuda"))
         embedding.append(temp)
     pickleData.pickle_save(embedding,"./content/Embeddings/userEmbed.pkl")
 
@@ -245,7 +208,7 @@ def getCategoryEmbedding(model):
     data = CustomDataset(data,label)
     embedding = []
     for i, label in data: 
-        temp = model.getLatent(i.to("cuda"))
+        temp = getLatentVector(model,i.to("cuda"))
         embedding.append(temp)
     pickleData.pickle_save(embedding,"./content/Embeddings/categoryEmbed.pkl")
 if __name__ == "__main__":
@@ -261,15 +224,12 @@ if __name__ == "__main__":
 
     print("저장 위치: ", saved_loc)
     writer = SummaryWriter(saved_loc)
-    EPOCHS = 30
-    BATCH_SIZE = 100
-    # Transformer code
-    transformer = transforms.Compose([transforms.ToTensor()])
-
+    EPOCHS = 50
+    BATCH_SIZE = 32
     data, label, input_len = makeUserData()
-    #pickleData.pickle_save(label,"./content/Embeddings/userlabel.pkl")
+    #pickleData.pickle_save(data,"./content/Embeddings/userdata.pkl")
     #data, label, input_len = makeCateData()
-    
+    #pickleData.pickle_save(data,"./content/Embeddings/catedata.pkl")
     # data = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData.pkl")
     # label = pickle_load("./content/POI(philadelphia)/normalizedUserVisitData_label.pkl")
     np.random.shuffle(data)
@@ -282,33 +242,15 @@ if __name__ == "__main__":
 
     testset = CustomDataset(te,te)
     testloader = DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
-
-    # Loading trainset, testset and trainloader, testloader
-    # trainset = torchvision.datasets.MNIST(root = './content/MNIST', train = True,
-    #                                         download = True, transform = transformer)
-
-    # trainloader = DataLoader(trainset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
-
-
-    # testset = torchvision.datasets.MNIST(root = './content/MNIST', train = False,
-    #                                         download = True, transform = transformer)
-
-    # testloader = DataLoader(testset, batch_size = BATCH_SIZE, shuffle = True, num_workers = 2)
     print(len(testset))
     print(len(trainset))
     
-    # sample check
-    #sample, label = next(iter(trainloader))
-    #imshow_grid(sample[0:8])
-    #print(len(sample))
-    VAE_model = VAE(input_len, 1024, 512, 128).to(DEVICE)
+    VAE_model = VAE(input_len, 1024, 256, 64).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
-    #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
-        train(epoch, VAE_model, trainloader, optimizer, input_len, 0.5)
+        train(epoch, VAE_model, trainloader, optimizer, input_len)
         test(epoch, VAE_model, testloader,input_len)
         print("\n")
-        #latent_to_image(epoch, VAE_model)
-    #test_other_input(VAE_model, np.ones(28*28))
     getUserEmbedding(VAE_model)
+    pickleData.pickle_save(VAE_model,"./content/models/VAE_model_KLD 1.0_user_64_2.pkl")
     writer.close()

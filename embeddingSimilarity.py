@@ -5,8 +5,10 @@ import multiprocessing as mp
 import torch
 import matplotlib.pyplot as plt
 def cosineSimilarity(x,y):
+    if norm(x) == 0 or norm(y) == 0:
+        return 0
     return np.dot(x,y)/(norm(x)*norm(y))
-def multi(embed, start, end, pn):
+def saveSimilarity_mp(embed, start, end, pn):
     print("start "+str(pn))
     sim = []
     count = 0
@@ -19,7 +21,7 @@ def multi(embed, start, end, pn):
 
         count += 1
     pickleData.pickle_save(sim,"./temp/temp"+pn+".pkl")
-def merge():
+def mergeTempData():
     tt = pickleData.pickle_load("./temp/temp0.pkl")
     t1 =pickleData.pickle_load("./temp/temp1.pkl")
     t2=pickleData.pickle_load("./temp/temp2.pkl")
@@ -32,6 +34,7 @@ def merge():
     tt.extend(t3)
     tt.extend(t4)
     tt.extend(t5)
+    print(len(tt))
     del(t1)
     del(t2)
     del(t3)
@@ -40,7 +43,7 @@ def merge():
     # print("saving..")
     # pickleData.pickle_save(tt,"./content/Embeddings/similarity.pkl")
     return tt
-def getSim():
+def getSimilarityEmbed():
     userEmbed = pickleData.pickle_load("./content/Embeddings/userEmbed.pkl")
     cateEmbed = pickleData.pickle_load("./content/Embeddings/categoryEmbed.pkl")
 
@@ -61,12 +64,32 @@ def getSim():
     [fusionEmbed,tl*5,len(fusionEmbed),"5"]]
 
     pool = mp.Pool(processes=6)
-    pool.starmap(multi,work)
+    pool.starmap(saveSimilarity_mp,work)
+    pool.close()
+    pool.join()
+def getSimilarityData(dataDirectory:str):
+    data = pickleData.pickle_load(dataDirectory)
+    tt = data
+    data=[]
+    for i in tt:
+        data.append(i.to("cpu"))
+        #data.append(i)
+    tl = int(len(data)/6)
+    temp = cosineSimilarity(data[0],data[1])
+    work = [[data,0,tl,"0"],
+    [data,tl,tl*2,"1"],
+    [data,tl*2,tl*3,"2"],
+    [data,tl*3,tl*4,"3"],
+    [data,tl*4,tl*5,"4"],
+    [data,tl*5,len(data),"5"]]
+
+    pool = mp.Pool(processes=6)
+    pool.starmap(saveSimilarity_mp,work)
     pool.close()
     pool.join()
 def getSortedEmbed():
     cateEmbed = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
-    result = merge()
+    result = mergeTempData()
     simResult = []
     count = 1
     for row in result:
@@ -120,9 +143,12 @@ def getFusionData(index, embedSize:str):
     elif index <12000:
         temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(12000)+".pkl")
         data = temp[index-11000]
+    elif index <13000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding"+ str(13000)+".pkl")
+        data = temp[index-12000]
     else:
         temp = pickleData.pickle_load("./content/Embeddings/"+embedSize+"/sortedFusionEmbedding_else.pkl")
-        data = temp[index-12000]
+        data = temp[index-13000]
 
     return data
 def visualize(index:int,embedSize:str):
@@ -166,13 +192,13 @@ def visualize(index:int,embedSize:str):
     plt.ylabel('Y-Index(100m)')
     plt.show()
 
-def compareSimilarArea(key1, key2, N:int, embedSize):
+def compareSimilarArea(key1, key2, N:int, src1, src2):
     posDict = pickleData.pickle_load("./content/Embeddings/posDict.pkl")
     index = posDict[key1]
-    sim1 = getFusionData(index, embedSize)
+    sim1 = getFusionData(index, src1)
 
     index = posDict[key2]
-    sim2 = getFusionData(index, embedSize)
+    sim2 = getFusionData(index, src2)
 
     set1 = set()
     set2 = set()
@@ -194,11 +220,133 @@ def getPositionDict():
         count+=1
 
     pickleData.pickle_save(data,"./content/Embeddings/posDict.pkl")
+def showMnistLatent(data:str):
+    latent_list = pickleData.pickle_load(data)
+    x = [[],[],[],[],[],[],[],[],[],[]]
+    y = [[],[],[],[],[],[],[],[],[],[]]
+    sym = ["kv","ro","bo","co","mo","yo","go","ko","rv","gv"]
+    lb = ["0","1","2","3","4","5","6","7","8","9"]
+    for i, l in latent_list:
+        if l == 1:
+            symbol = "ro"
+            x[1].append((i[0][0].to("cpu")))
+            y[1].append(i[0][1].to("cpu"))
+        elif l == 2:
+            symbol = "bo"
+            x[2].append((i[0][0].to("cpu")))
+            y[2].append(i[0][1].to("cpu"))
+        elif l == 3:
+            symbol = "co"
+            x[3].append((i[0][0].to("cpu")))
+            y[3].append(i[0][1].to("cpu"))
+        elif l == 4:
+            symbol = "mo"
+            x[4].append((i[0][0].to("cpu")))
+            y[4].append(i[0][1].to("cpu"))
+        elif l == 5:
+            symbol = "yo"
+            x[5].append((i[0][0].to("cpu")))
+            y[5].append(i[0][1].to("cpu"))
+        elif l == 6:
+            symbol = "go"
+            x[6].append((i[0][0].to("cpu")))
+            y[6].append(i[0][1].to("cpu"))
+        elif l == 7:
+            symbol = "ko"
+            x[7].append((i[0][0].to("cpu")))
+            y[7].append(i[0][1].to("cpu"))
+        elif l == 8:
+            symbol = "rv"
+            x[8].append((i[0][0].to("cpu")))
+            y[8].append(i[0][1].to("cpu"))
+        elif l == 9:
+            symbol = "gv"
+            x[9].append((i[0][0].to("cpu")))
+            y[9].append(i[0][1].to("cpu"))
+        elif l == 0:
+            symbol = "kv"
+            x[0].append((i[0][0].to("cpu")))
+            y[0].append(i[0][1].to("cpu"))
+        else:
+            continue
+    for i in range(10):
+        plt.plot(x[i],y[i], sym[i],label = lb[i], markersize = 3)
+    plt.legend()
+    plt.show()
+
+def similarityMnistLatent(data:str):
+    latent_list = pickleData.pickle_load(data)
+    x = [[],[],[],[],[],[],[],[],[],[]]
+    y = [[],[],[],[],[],[],[],[],[],[]]
+    sym = ["kv","ro","bo","co","mo","yo","go","ko","rv","gv"]
+    lb = ["0","1","2","3","4","5","6","7","8","9"]
+    sim = []
+    for i, l in latent_list:
+        i
+
+    for i, l in latent_list:
+        if l == 1:
+            symbol = "ro"
+            x[1].append((i[0][0].to("cpu")))
+            y[1].append(i[0][1].to("cpu"))
+        elif l == 2:
+            symbol = "bo"
+            x[2].append((i[0][0].to("cpu")))
+            y[2].append(i[0][1].to("cpu"))
+        elif l == 3:
+            symbol = "co"
+            x[3].append((i[0][0].to("cpu")))
+            y[3].append(i[0][1].to("cpu"))
+        elif l == 4:
+            symbol = "mo"
+            x[4].append((i[0][0].to("cpu")))
+            y[4].append(i[0][1].to("cpu"))
+        elif l == 5:
+            symbol = "yo"
+            x[5].append((i[0][0].to("cpu")))
+            y[5].append(i[0][1].to("cpu"))
+        elif l == 6:
+            symbol = "go"
+            x[6].append((i[0][0].to("cpu")))
+            y[6].append(i[0][1].to("cpu"))
+        elif l == 7:
+            symbol = "ko"
+            x[7].append((i[0][0].to("cpu")))
+            y[7].append(i[0][1].to("cpu"))
+        elif l == 8:
+            symbol = "rv"
+            x[8].append((i[0][0].to("cpu")))
+            y[8].append(i[0][1].to("cpu"))
+        elif l == 9:
+            symbol = "gv"
+            x[9].append((i[0][0].to("cpu")))
+            y[9].append(i[0][1].to("cpu"))
+        elif l == 0:
+            symbol = "kv"
+            x[0].append((i[0][0].to("cpu")))
+            y[0].append(i[0][1].to("cpu"))
+        else:
+            continue
+    for i in range(10):
+        plt.plot(x[i],y[i], sym[i],label = lb[i], markersize = 3)
+    plt.legend()
+    plt.show()
 if __name__ == "__main__":
-    #getSim()
+    #getSimilarityData("./content/Embeddings/KLD 1.0/user64_2/userEmbed.pkl")
+    #getSimilarityEmbed()
     #getSortedEmbed()
     #getPositionDict()
-    visualize(4000, "128+64_2")
+    # dd = [[10,20,30,40,50],
+    # [1,2,3,4,5],
+    # [7,2,8,4,1],
+    # [88,99,77,44,55]]
+    # np.random.shuffle(dd)
+
+    visualize(4000, "userData similarity")
+    #visualize(4000, "KLD 1.0/user64_2")
+    #visualize(4000, "userData similarity")
+    #visualize(4000, "KLD 0.5/128")
     
-    #visualize(4000, "1024+128")
-    #compareSimilarArea("78,402","98,428",10,"128+64")
+    #compareSimilarArea("98,428","",100,"KLD 1.0/user64","KLD 1.0/user64_2")
+    #showMnistLatent("mnist latent_list_2.pkl")
+    #showMnistLatent("mnist latent_list_0.5.pkl")
