@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def cosineSimilarity(x,y):
     if norm(x) == 0 or norm(y) == 0:
         return 0
-    return np.dot(x,y)/(norm(x)*norm(y))
+    return np.dot(x,np.transpose(y))/(norm(x)*norm(y))
 def saveSimilarity_mp(embed, start, end, pn):
     print("start "+str(pn))
     sim = []
@@ -69,10 +69,10 @@ def getSimilarityEmbed():
     pool.join()
 def getSimilarityData(dataDirectory:str):
     data = pickleData.pickle_load(dataDirectory)
-    tt = data
+    tt = data[:4999]
     data=[]
     for i in tt:
-        data.append(i.to("cpu"))
+        data.append(i[0].to("cpu"))
         #data.append(i)
     tl = int(len(data)/6)
     temp = cosineSimilarity(data[0],data[1])
@@ -88,7 +88,7 @@ def getSimilarityData(dataDirectory:str):
     pool.close()
     pool.join()
 def getSortedEmbed():
-    cateEmbed = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
+    cateEmbed = pickleData.pickle_load("./content/Embeddings/mnist latent_label.pkl")
     result = mergeTempData()
     simResult = []
     count = 1
@@ -162,8 +162,8 @@ def visualize(index:int,embedSize:str):
         for j in range(len(visitedArea[0])):
             if(visitedArea[i][j] > 0.0):
                 area.append(visitedArea[i][j]/19453 * 500)
-                visitedX.append(j)
-                visitedY.append(i)
+                visitedX.append(j/2)
+                visitedY.append(i/2)
                 color.append(visitedArea[i][j])
     # plt.matshow(visitedArea)
     # plt.colorbar()
@@ -331,10 +331,53 @@ def similarityMnistLatent(data:str):
         plt.plot(x[i],y[i], sym[i],label = lb[i], markersize = 3)
     plt.legend()
     plt.show()
+
+def visualizeMNISTLatent(index, folder, di):
+    if index <1000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding"+ str(1000)+".pkl")
+        data = temp[index]
+    elif index <2000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding"+ str(2000)+".pkl")
+        data = temp[index-1000]
+    elif index <3000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding"+ str(3000)+".pkl")
+        data = temp[index-2000]
+    elif index <4000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding"+ str(4000)+".pkl")
+        data = temp[index-3000]
+    elif index <5000:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding"+ str(5000)+".pkl")
+        data = temp[index-4000]
+    else:
+        temp = pickleData.pickle_load("./content/Embeddings/"+folder+"/sortedFusionEmbedding_else.pkl")
+        data = temp[index-5000]
+
+    xplot = []
+    yplot = []
+    
+    plt.plot(data[0][1][1], data[0][1][0], 'ro')
+    plt.text(data[0][1][1],data[0][1][0],"("+str(data[0][1][1])+","+str(data[0][1][0])+")")
+    for i in range(1,11):
+        xplot.append(data[i][1][1])
+        yplot.append(data[i][1][0])
+        plt.text(data[i][1][1],data[i][1][0],"("+str(data[i][1][1])+","+str(data[i][1][0])+")")
+    plt.plot(xplot, yplot, 'co')
+    xplot = []
+    yplot = []
+    for i in range(11,51):
+        xplot.append(data[i][1][1])
+        yplot.append(data[i][1][0])
+        #plt.text(data[i][1][1],data[i][1][0],"("+str(data[i][1][1])+","+str(data[i][1][0])+")")
+    plt.plot(xplot, yplot, 'yo')
+    plt.xlabel('X-Index(100m)')
+    plt.ylabel('Y-Index(100m)')
+    plt.show()
+
 if __name__ == "__main__":
-    #getSimilarityData("./content/Embeddings/KLD 1.0/user64_2/userEmbed.pkl")
-    #getSimilarityEmbed()
-    #getSortedEmbed()
+    #getSimilarityData("./content/Embeddings/200m/cate_4/categoryEmbed.pkl")
+    getSimilarityData("mnist latent_list.pkl")
+    # getSimilarityEmbed()
+    getSortedEmbed()
     #getPositionDict()
     # dd = [[10,20,30,40,50],
     # [1,2,3,4,5],
@@ -342,11 +385,13 @@ if __name__ == "__main__":
     # [88,99,77,44,55]]
     # np.random.shuffle(dd)
 
-    visualize(4000, "userData similarity")
-    #visualize(4000, "KLD 1.0/user64_2")
+    #visualize(2120, "200m/128+128")
+    #visualize(2120, "200m/128+128_2")
     #visualize(4000, "userData similarity")
     #visualize(4000, "KLD 0.5/128")
-    
-    #compareSimilarArea("98,428","",100,"KLD 1.0/user64","KLD 1.0/user64_2")
-    #showMnistLatent("mnist latent_list_2.pkl")
+    # 81,244 : 4000 
+    # 0,43 : 0
+    # 44,212 : 2120
+    #compareSimilarArea("0,43","0,43",100,"200m/64+64","200m/64+64_2")
+    #showMnistLatent("mnist latent_list.pkl")
     #showMnistLatent("mnist latent_list_0.5.pkl")

@@ -52,7 +52,9 @@ class VAE(nn.Module):
         return self.decode(z), mu, logvar
 def loss_function(recon_x, x, mu, logvar, input_size):
     BCE = F.binary_cross_entropy(recon_x, x.view(-1, input_size), reduction = 'sum')
+    BCE = torch.mean(BCE)
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    KLD = torch.mean(KLD)
     return BCE, KLD
 def train(epoch, model, train_loader, optimizer, input_size, lam:float = 1.0):
     #모델이 가지는 레이어들을 training mode로 바꾸어준다.
@@ -120,8 +122,7 @@ def test(epoch, model, test_loader, input_size, lam:float = 1.0):
 def getLatentVector(model, input):
     with torch.no_grad():
         mu, logvar = model.encode(input)
-        z = model.reparameterize(mu, logvar)
-        return z
+        return mu
 class CustomDataset(Dataset):
     def __init__(self, data, label):
         self.x_data = data
@@ -138,8 +139,8 @@ class CustomDataset(Dataset):
         return x,y              
 
 def makeUserData():
-    f = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/userVisitDataPerArea.pkl")
-    r = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/user_id2Index.pkl")
+    f = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10 200m/userVisitDataPerArea.pkl")
+    r = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10 200m/user_id2Index.pkl")
     label = []
     data = []
     #total = []
@@ -156,10 +157,12 @@ def makeUserData():
             
             data.append(li)
             label.append([i,j])
+
+    
     return data , label, len(r)
 def makeCateData():
-    f = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/visitedCategoryPerArea.pkl")
-    r = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10/cate2Index.pkl")
+    f = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10 200m/visitedCategoryPerArea.pkl")
+    r = pickleData.pickle_load("./content/POI(philadelphia)/philadelphia10 200m/cate2Index.pkl")
     userlabels = pickleData.pickle_load("./content/Embeddings/userlabel.pkl")
     label = []
     data = []
@@ -224,9 +227,10 @@ if __name__ == "__main__":
 
     print("저장 위치: ", saved_loc)
     writer = SummaryWriter(saved_loc)
-    EPOCHS = 50
+    EPOCHS = 20
     BATCH_SIZE = 32
     data, label, input_len = makeUserData()
+    #pickleData.pickle_save(label, "./content/Embeddings/userlabel 200m.pkl")
     #pickleData.pickle_save(data,"./content/Embeddings/userdata.pkl")
     #data, label, input_len = makeCateData()
     #pickleData.pickle_save(data,"./content/Embeddings/catedata.pkl")
@@ -245,12 +249,12 @@ if __name__ == "__main__":
     print(len(testset))
     print(len(trainset))
     
-    VAE_model = VAE(input_len, 1024, 256, 64).to(DEVICE)
+    VAE_model = VAE(input_len, 512, 256, 128).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     for epoch in tqdm(range(0, EPOCHS)):
         train(epoch, VAE_model, trainloader, optimizer, input_len)
         test(epoch, VAE_model, testloader,input_len)
         print("\n")
     getUserEmbedding(VAE_model)
-    pickleData.pickle_save(VAE_model,"./content/models/VAE_model_KLD 1.0_user_64_2.pkl")
+    #pickleData.pickle_save(VAE_model,"./content/models/loss mean 200m cate8_2.pkl")
     writer.close()

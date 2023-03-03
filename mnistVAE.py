@@ -135,7 +135,7 @@ def test_other_input(model,test_data):
 
 def latent_to_image(epoch, model):
     with torch.no_grad():
-        sample = torch.randn(32, 2).to(DEVICE)
+        sample = torch.randn(32, 32).to(DEVICE)
         recon_image = model.decode(sample).cpu()
         grid = torchvision.utils.make_grid(recon_image.view(-1, 1, 28, 28))
         writer.add_image("Latent To Image", grid, epoch)        
@@ -144,8 +144,8 @@ def getLatentVector(model, input_dataset):
     with torch.no_grad():
         for data, label in input_dataset:
             mu, logvar = model.encode(data.view(-1, 784).to("cuda"))
-            z = model.reparameterize(mu, logvar)
-            letant_list.append((z,label))
+            
+            letant_list.append((mu,label))
         return letant_list
 class CustomDataset(Dataset):
     def __init__(self, data, label):
@@ -199,15 +199,15 @@ if __name__ == "__main__":
     #imshow_grid(sample[0:8])
     sample , label = next(iter(testset))
     print(label)
-    VAE_model = VAE(28*28, 512, 128, 2).to(DEVICE)
+    VAE_model = VAE(28*28, 512, 128, 32).to(DEVICE)
     optimizer = optim.Adam(VAE_model.parameters(), lr = 1e-3)
     #test_other_input(VAE_model, np.ones(28*28))
     for epoch in tqdm(range(0, EPOCHS)):
-        train(epoch, VAE_model, trainloader, optimizer, 28*28,0.5)
-        test(epoch, VAE_model, testloader,28*28,0.5)
+        train(epoch, VAE_model, trainloader, optimizer, 28*28)
+        test(epoch, VAE_model, testloader,28*28)
         print("\n")
         latent_to_image(epoch, VAE_model)
     test_other_input(VAE_model, np.ones(28*28))
     latent_list = getLatentVector(VAE_model,testset)
-    pickleData.pickle_save(latent_list, "mnist latent_list_0.5.pkl")
+    pickleData.pickle_save(latent_list, "mnist latent_list.pkl")
     writer.close()
